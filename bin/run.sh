@@ -34,16 +34,16 @@ echo "${slug}: testing..."
 
 pushd "${input_dir}" > /dev/null
 
-# # Run the tests for the provided implementation file and redirect stdout and
-# # stderr to capture it
-test_output=$(cat "${tests_file}" | poly "test.sml" 2>&1)
+# Run the tests for the provided implementation file and redirect stdout and
+# stderr to capture it
+test_output=$(cat "${tests_file}" | poly --error-exit  -q 2>&1)
 exit_code=$?
 
 popd > /dev/null
 
 # Write the results.json file based on the exit code of the command that was 
 # just executed that tested the implementation file
-if [ $? -eq 0 ]; then
+if [ $exit_code -eq 0 ]; then
     jq -n '{version: 1, status: "pass"}' > ${results_file}
 else
     jq -n --arg output "${test_output}" '{version: 1, status: "fail", output: $output}' > ${results_file}
