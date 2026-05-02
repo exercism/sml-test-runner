@@ -1,21 +1,23 @@
-FROM ubuntu:20.04 AS builder
+# To refresh, copy the Digest from
+# `docker buildx imagetools inspect cgr.dev/chainguard/wolfi-base:latest`
+ARG WOLFI_BASE=cgr.dev/chainguard/wolfi-base@sha256:3258be472764337fd13095bcbb3182da170243b5819fd67ad4c0754590588b31
 
-RUN apt-get update && \
-    apt-get install -y build-essential curl gcc jq make && \
-    apt-get purge --auto-remove && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+FROM ${WOLFI_BASE} AS builder
 
-RUN curl -LO https://github.com/polyml/polyml/archive/v5.8.tar.gz && \
-    tar xf v5.8.tar.gz && \
-    cd polyml-5.8 && ./configure --prefix=/tmp && make && make install
-FROM ubuntu:20.04
+# build-base bundles gcc/g++, make, glibc-dev and the standard
+# linker. Poly/ML's runtime is C++; build-base includes g++.
+RUN apk add --no-cache build-base curl
 
-RUN apt-get update && \
-    apt-get install -y jq && \
-    apt-get purge --auto-remove && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN curl -LO https://github.com/polyml/polyml/archive/v5.9.2.tar.gz && \
+    tar xf v5.9.2.tar.gz && \
+    cd polyml-5.9.2 && ./configure --prefix=/tmp && make && make install
+
+
+FROM ${WOLFI_BASE}
+
+# bash for run.sh, jq for JSON output, libgcc/libstdc++ for the
+# Poly/ML runtime, coreutils for the cat/mkdir helpers run.sh uses.
+RUN apk add --no-cache bash coreutils jq libgcc libstdc++
 
 COPY --from=builder /tmp/ /usr/
 
